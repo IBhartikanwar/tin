@@ -1,0 +1,62 @@
+{
+  "package_format": "tin-workflow-package-v1",
+  "definition": {
+    "key": "growth.release_announce",
+    "title": "Turn a release into channel announcements",
+    "description": "Extract user-facing changes from a changelog, write concise announcements for Twitter, LinkedIn and email, then render a ready-to-post report.",
+    "version": "1.0.0",
+    "executor": "workflow.code",
+    "schedule_modes": ["on_demand"],
+    "human_review": {"eligible": true, "summary": "Review the generated announcements before posting"},
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {"type": "string", "format": "uuid"},
+        "changelog": {
+          "type": "string", "minLength": 10, "maxLength": 16000,
+          "title": "Changelog or release notes",
+          "x-tin-ui": {"control": "textarea", "order": 10}
+        },
+        "product_name": {
+          "type": "string", "minLength": 1, "maxLength": 120,
+          "title": "Product name"
+        },
+        "audience": {
+          "type": "string", "maxLength": 500, "default": "",
+          "title": "Who reads these announcements",
+          "x-tin-ui": {"control": "textarea", "order": 20}
+        },
+        "tone": {
+          "type": "string",
+          "enum": ["professional", "casual", "enthusiastic"],
+          "default": "professional",
+          "title": "Announcement tone"
+        }
+      },
+      "required": ["project_id", "changelog", "product_name"]
+    },
+    "code": {
+      "runtime": "python3.12.8-stdlib-v1",
+      "entrypoint": "main.py",
+      "files": ["main.py"],
+      "timeout_seconds": 60,
+      "model_routes": {
+        "extract": {
+          "provider": "openai", "model": "gpt-5.6-luna", "max_calls": 1,
+          "max_input_bytes": 28000, "max_output_tokens": 2048
+        },
+        "announce": {
+          "provider": "openai", "model": "gpt-5.6-luna", "max_calls": 1,
+          "max_input_bytes": 24000, "max_output_tokens": 4096
+        }
+      },
+      "output": {
+        "kind": "project.artifact",
+        "path": "reports/RELEASE_ANNOUNCE.md",
+        "media_type": "text/markdown",
+        "max_bytes": 32000
+      }
+    }
+  }
+}
